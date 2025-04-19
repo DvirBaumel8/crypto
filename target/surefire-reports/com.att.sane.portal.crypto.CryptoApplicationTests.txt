@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.att.sane.portal.crypto.CryptoApplicationTests
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.387 s -- in com.att.sane.portal.crypto.CryptoApplicationTests
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.136 s -- in com.att.sane.portal.crypto.CryptoApplicationTests

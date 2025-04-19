@@ -2,3 +2,12 @@ server:
   port: 8084
   servlet:
     context-path: /api/crypto
+
+#logging:
+#  level:
+#    org:
+#      web3j:
+#        protocol:
+#          http:
+#            httpService: DEBUG
+#    okhttp3: DEBUG

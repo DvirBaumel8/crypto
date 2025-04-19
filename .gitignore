@@ -2,8 +2,10 @@
 *.class
 *.target
 *.classes
+*.txt
 # Log file
 *.log
+*.lst
 *.iml
 *.xml
 # BlueJ files
