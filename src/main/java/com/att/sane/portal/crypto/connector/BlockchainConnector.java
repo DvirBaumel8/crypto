@@ -24,6 +24,8 @@ import static okhttp3.logging.HttpLoggingInterceptor.Level.BASIC;
 public class BlockchainConnector {
 
     public Web3j connectToWeb3jByUrl(String url) throws NoSuchAlgorithmException, KeyManagementException {
+        log.info("Inside BlockchainConnector.connectToWeb3jByUrl");
+
         X509TrustManager x509TrustManager = new X509TrustManager() {
 
             @Override
@@ -54,7 +56,9 @@ public class BlockchainConnector {
                 .proxy(proxy)
                 .build();
 
-        return Web3j.build(new HttpService(url, okHttpClient));
+        Web3j web3j = Web3j.build(new HttpService(url, okHttpClient));
+        log.info("Outside BlockchainConnector.connectToWeb3jByUrl");
+        return web3j;
     }
 
 }

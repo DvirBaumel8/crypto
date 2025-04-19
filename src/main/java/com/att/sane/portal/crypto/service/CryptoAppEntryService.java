@@ -15,7 +15,7 @@ public class CryptoAppEntryService {
 
     public void start() throws NoSuchAlgorithmException, KeyManagementException {
         log.info("Crypto app entry start");
-        lpListener.start();
+        lpListener.scan();
         log.info("Crypto app entry end");
     }
 
