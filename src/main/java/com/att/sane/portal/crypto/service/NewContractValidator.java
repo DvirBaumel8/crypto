@@ -7,17 +7,13 @@ import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.web3j.abi.FunctionEncoder;
-import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
-import org.web3j.abi.datatypes.generated.Uint112;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.abi.datatypes.generated.Uint32;
 import org.web3j.protocol.Web3j;
-import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthGetTransactionReceipt;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
@@ -26,8 +22,10 @@ import org.web3j.utils.Convert;
 import static com.att.sane.portal.crypto.model.CommonConstants.FACTORY_ADDRESS_INFURA;
 import static com.att.sane.portal.crypto.model.CommonConstants.HEXADECIMAL_ZERO;
 import static com.att.sane.portal.crypto.model.CommonConstants.WETH_ADDRESS;
-import static org.web3j.protocol.core.DefaultBlockParameterName.LATEST;
-import static org.web3j.protocol.core.methods.request.Transaction.createEthCallTransaction;
+import static com.att.sane.portal.crypto.service.AppUtils.createFunction;
+import static com.att.sane.portal.crypto.service.AppUtils.decodeFunctionResponse;
+import static com.att.sane.portal.crypto.service.AppUtils.encodeFunction;
+import static com.att.sane.portal.crypto.service.AppUtils.executeEtherCall;
 import static org.web3j.utils.Convert.Unit.ETHER;
 
 @Component
@@ -88,43 +86,35 @@ public class NewContractValidator {
     }
 
     private boolean isFunctionMissing(String functionName, String contractAddress, Web3j web3j) throws IOException {
-        Function nameFunction = new Function(functionName, List.of(), List.of(TypeReference.create(Uint256.class)));
-        String encodedName = FunctionEncoder.encode(nameFunction);
-        EthCall response = web3j.ethCall(createEthCallTransaction(null, contractAddress, encodedName), LATEST).send();
-        List<Type> decode = FunctionReturnDecoder.decode(response.getValue(), nameFunction.getOutputParameters());
+        Function function = createFunction(functionName, List.of(), List.of(TypeReference.create(Uint256.class)));
+        String encodedFunction = encodeFunction(function);
+        EthCall response = executeEtherCall(web3j, encodedFunction, contractAddress);
+        List<Type> decode = decodeFunctionResponse(response.getValue(), function.getOutputParameters());
         return decode.isEmpty();
     }
 
     private boolean isLiquidityExists(Web3j web3j, String contractAddress) throws IOException {
-        Function getPairFunction = new Function("getPair",
-                List.of(new Address(WETH_ADDRESS), new Address(contractAddress)), List.of(TypeReference.create(Address.class)));
+        Function getPairFunction = createFunction("getPair", List.of(new Address(WETH_ADDRESS), new Address(contractAddress)), List.of(TypeReference.create(Address.class)));
 
-        String encodedGetPairFunction = FunctionEncoder.encode(getPairFunction);
-        EthCall response = web3j.ethCall(
-                        createEthCallTransaction(null, FACTORY_ADDRESS_INFURA, encodedGetPairFunction), LATEST)
-                .send();
+        String encodedGetPairFunction = encodeFunction(getPairFunction);
+
+        EthCall response = executeEtherCall(web3j, encodedGetPairFunction, FACTORY_ADDRESS_INFURA);
         String value = response.getValue();
         String pairAddressValue = "0x" + value.substring(26);
 
         if(!pairAddressValue.equals(HEXADECIMAL_ZERO)) {
-            Function getReservesFunction = new Function("getReserves", List.of(),
-                    List.of(TypeReference.create(Uint112.class), TypeReference.create(Uint112.class), TypeReference.create(Uint32.class)));
-            String encodeGetReservesFunction = FunctionEncoder.encode(getReservesFunction);
+            Function getReservesFunction = createFunction("getReserves", List.of(), List.of(TypeReference.create(Uint32.class)));
+            String encodeGetReservesFunction = encodeFunction(getReservesFunction);
 
-            EthCall reservesResponse = web3j.ethCall(
-                            Transaction.createEthCallTransaction(null, pairAddressValue, encodeGetReservesFunction), LATEST)
-                    .send();
+            EthCall reservesResponse = executeEtherCall(web3j, encodeGetReservesFunction, pairAddressValue);
 
-            List<Type> decoded = FunctionReturnDecoder.decode(reservesResponse.getValue(), getReservesFunction.getOutputParameters());
+            List<Type> decoded = decodeFunctionResponse(reservesResponse.getValue(), getReservesFunction.getOutputParameters());
             BigInteger reserve0 = (BigInteger) decoded.getFirst().getValue();
             BigInteger reserve1 = (BigInteger) decoded.get(1).getValue();
 
-            Function token0Function = new Function("token0",
-                    List.of(), List.of(TypeReference.create(Address.class)));
-            String encodedToken0Function = FunctionEncoder.encode(token0Function);
-            EthCall token0Response = web3j.ethCall(
-                            Transaction.createEthCallTransaction(null, pairAddressValue, encodedToken0Function), LATEST)
-                    .send();
+            Function token0Function = createFunction("token0", List.of(), List.of(TypeReference.create(Address.class)));
+            String encodedToken0Function = encodeFunction(token0Function);
+            EthCall token0Response = executeEtherCall(web3j, encodedToken0Function, pairAddressValue);
 
             String token0Value = "0x" + token0Response.getValue().substring(26);
             boolean isWbnbToken0 = token0Value.equalsIgnoreCase(WETH_ADDRESS);
